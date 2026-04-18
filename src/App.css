@@ -1,0 +1,5 @@
+/* App styles are handled in index.css and via glass-panel components */
+.App {
+  max-width: 1280px;
+  margin: 0 auto;
+}
