@@ -7,7 +7,7 @@ export interface BotConfig {
   functionName: string;
   args: any[];
   mode: 'instant' | 'snipe';
-  gasPrice?: string; // Total gas price in Gwei
+  maxPriorityFee?: string; // Total priority fee (tip) in Gwei
   mintValue?: string; // ETH value
 }
 
@@ -69,9 +69,23 @@ export class MintBot {
       
       const overrides: any = {};
       
-      // Gas price override
-      if (config.gasPrice) {
-        overrides.gasPrice = ethers.parseUnits(config.gasPrice, 'gwei');
+      // EIP-1559 Gas handling
+      if (config.maxPriorityFee) {
+        const [feeData, block] = await Promise.all([
+          this.provider.getFeeData(),
+          this.provider.getBlock('latest')
+        ]);
+        
+        const priorityFee = ethers.parseUnits(config.maxPriorityFee, 'gwei');
+        overrides.maxPriorityFeePerGas = priorityFee;
+        
+        if (block && block.baseFeePerGas) {
+          // Rule of thumb: maxFee = (2 * baseFee) + priorityFee
+          overrides.maxFeePerGas = (block.baseFeePerGas * 2n) + priorityFee;
+        } else {
+          // Fallback if baseFee is not available
+          overrides.maxFeePerGas = feeData.maxFeePerGas || (priorityFee * 2n);
+        }
       }
 
       // Paid mint value override

@@ -32,7 +32,7 @@ function App() {
     functionName: 'mintSeaDrop',
     args: [],
     mode: 'instant',
-    gasPrice: '20',
+    maxPriorityFee: '2',
     mintValue: '0'
   });
 
@@ -189,14 +189,17 @@ function App() {
         </div>
 
         <div className="section">
-          <label className="label">Giá Gas Cố Định (Gas Price - Gwei)</label>
+          <label className="label">Tiền Tip (Max Priority Fee - Gwei)</label>
           <input 
             type="number"
             className="input"
-            placeholder="Ví dụ: 10"
-            value={config.gasPrice}
-            onChange={(e) => setConfig({...config, gasPrice: e.target.value})}
+            placeholder="Ví dụ: 2"
+            value={config.maxPriorityFee}
+            onChange={(e) => setConfig({...config, maxPriorityFee: e.target.value})}
           />
+          <span className="label" style={{ fontSize: 10, marginTop: 4, textTransform: 'none' }}>
+            Thiết lập tiền tip cho thợ đào (EIP-1559). 2-5 là nhanh, &gt;10 là cực nhanh.
+          </span>
         </div>
 
         <div className="section">
