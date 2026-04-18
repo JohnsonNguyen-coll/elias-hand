@@ -33,7 +33,9 @@ function App() {
     args: [],
     mode: 'instant',
     maxPriorityFee: '2',
-    mintValue: '0'
+    mintValue: '0',
+    mintType: 'seadrop',
+    quantity: 1
   });
 
   const privateKeyRef = useRef('');
@@ -116,6 +118,18 @@ function App() {
         </div>
 
         <div className="section">
+          <label className="label">Chế độ Mint</label>
+          <select 
+            className="input"
+            value={config.mintType}
+            onChange={(e) => setConfig({...config, mintType: e.target.value as any})}
+          >
+            <option value="seadrop">SeaDrop (OpenSea)</option>
+            <option value="custom">Custom Contract (Direct)</option>
+          </select>
+        </div>
+
+        <div className="section">
           <label className="label">Mạng / Chain</label>
           <select 
             className="input"
@@ -134,9 +148,6 @@ function App() {
             placeholder="0x..."
             onChange={(e) => { privateKeyRef.current = e.target.value }}
           />
-          <span className="label" style={{ fontSize: 10, marginTop: 4, textTransform: 'none' }}>
-            Bảo mật: Key không được lưu vào state của UI.
-          </span>
         </div>
 
         <div className="section">
@@ -152,41 +163,62 @@ function App() {
 
         <div className="grid-2">
             <div className="section">
-                <label className="label">Tên hàm Mint</label>
+                <label className="label">Số lượng Mint</label>
                 <input 
-                    type="text"
+                    type="number"
                     className="input"
-                    placeholder="mintSeaDrop"
-                    value={config.functionName}
-                    onChange={(e) => setConfig({...config, functionName: e.target.value})}
+                    value={config.quantity}
+                    onChange={(e) => setConfig({...config, quantity: Number(e.target.value)})}
                 />
             </div>
-            <div className="section">
-                <label className="label">Giá Mint (ETH)</label>
-                <input 
-                    type="text"
-                    className="input"
-                    placeholder="0.01"
-                    value={config.mintValue}
-                    onChange={(e) => setConfig({...config, mintValue: e.target.value})}
-                />
-            </div>
+            {config.mintType === 'custom' ? (
+                <div className="section">
+                    <label className="label">Giá Mint (ETH)</label>
+                    <input 
+                        type="text"
+                        className="input"
+                        placeholder="0.01"
+                        value={config.mintValue}
+                        onChange={(e) => setConfig({...config, mintValue: e.target.value})}
+                    />
+                </div>
+            ) : (
+                <div className="section">
+                    <label className="label">Loại Contract</label>
+                    <div className="input" style={{ opacity: 0.5, fontSize: 12 }}>Auto-Fetch Giá</div>
+                </div>
+            )}
         </div>
 
-        <div className="section">
-          <label className="label">Tham số hàm (JSON array)</label>
-          <input 
-            type="text"
-            className="input"
-            placeholder='["0xAddress", 1]'
-            onChange={(e) => {
-               try {
-                 const parsed = JSON.parse(e.target.value);
-                 if (Array.isArray(parsed)) setConfig({...config, args: parsed});
-               } catch (e) {}
-            }}
-          />
-        </div>
+        {config.mintType === 'custom' && (
+            <>
+                <div className="section">
+                    <label className="label">Tên hàm Mint</label>
+                    <input 
+                        type="text"
+                        className="input"
+                        placeholder="mint"
+                        value={config.functionName}
+                        onChange={(e) => setConfig({...config, functionName: e.target.value})}
+                    />
+                </div>
+
+                <div className="section">
+                    <label className="label">Tham số hàm (JSON array)</label>
+                    <input 
+                        type="text"
+                        className="input"
+                        placeholder='["0xAddress", 1]'
+                        onChange={(e) => {
+                           try {
+                             const parsed = JSON.parse(e.target.value);
+                             if (Array.isArray(parsed)) setConfig({...config, args: parsed});
+                           } catch (e) {}
+                        }}
+                    />
+                </div>
+            </>
+        )}
 
         <div className="section">
           <label className="label">Tiền Tip (Max Priority Fee - Gwei)</label>

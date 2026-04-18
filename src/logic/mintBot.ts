@@ -9,6 +9,8 @@ export interface BotConfig {
   mode: 'instant' | 'snipe';
   maxPriorityFee?: string; // Total priority fee (tip) in Gwei
   mintValue?: string; // ETH value
+  mintType: 'seadrop' | 'custom';
+  quantity: number;
 }
 
 export type LogMessage = {
@@ -16,6 +18,9 @@ export type LogMessage = {
   message: string;
   type: 'info' | 'error' | 'success' | 'warning';
 };
+
+const SEADROP_ADDRESS = "0x00005EA00Ac477B1030CE78506496e8C2dE24bf5";
+const OPEN_SEA_FEE_RECIPIENT = "0x0000a26b00c1F0DF003000390027140000fAa719";
 
 export class MintBot {
   private provider: ethers.JsonRpcProvider;
@@ -37,12 +42,32 @@ export class MintBot {
     });
   }
 
+  private async buildOverrides(config: BotConfig, value?: bigint) {
+    const overrides: any = {};
+
+    if (config.maxPriorityFee) {
+      const block = await this.provider.getBlock('latest');
+      const priorityFee = ethers.parseUnits(config.maxPriorityFee, 'gwei');
+      overrides.maxPriorityFeePerGas = priorityFee;
+      overrides.maxFeePerGas = block?.baseFeePerGas
+        ? (block.baseFeePerGas * 2n) + priorityFee
+        : (priorityFee * 3n); // Fallback
+    }
+
+    if (value && value > 0n) overrides.value = value;
+    return overrides;
+  }
+
   async start(config: BotConfig) {
     this.isRunning = true;
-    this.log(`Khởi tạo bot cho Contract: ${config.contractAddress}`, 'info');
+    this.log(`Khởi tạo Bot [${config.mintType.toUpperCase()}] cho Contract: ${config.contractAddress}`, 'info');
     
     if (config.mode === 'instant') {
-      await this.mint(config);
+      if (config.mintType === 'seadrop') {
+        await this.mintSeaDrop(config);
+      } else {
+        await this.mintCustom(config);
+      }
     } else {
       await this.snipe(config);
     }
@@ -53,11 +78,50 @@ export class MintBot {
     this.log('Đã dừng Bot', 'warning');
   }
 
-  async mint(config: BotConfig) {
+  async mintSeaDrop(config: BotConfig) {
     try {
-      this.log('Đang thực hiện lệnh Mint...', 'info');
+      this.log('Đang đọc cấu hình từ SeaDrop contract...', 'info');
       
-      // Dynamic ABI detection from args
+      const dropAbi = [`function getPublicDrop(address) view returns (
+        tuple(uint80 mintPrice, uint48 startTime, uint48 endTime, 
+        uint16 maxTotalMintableByWallet, uint16 feeBps, bool restrictFeeRecipients)
+      )`];
+      const seadropReader = new ethers.Contract(SEADROP_ADDRESS, dropAbi, this.provider);
+      const drop = await seadropReader.getPublicDrop(config.contractAddress);
+      
+      this.log(`Giá mint SeaDrop: ${ethers.formatEther(drop.mintPrice)} ETH`, 'info');
+
+      const mintAbi = [`function mintPublic(address,address,address,uint256) payable`];
+      const seadrop = new ethers.Contract(SEADROP_ADDRESS, mintAbi, this.wallet);
+
+      const qty = BigInt(config.quantity || 1);
+      const totalValue = drop.mintPrice * qty;
+
+      const overrides = await this.buildOverrides(config, totalValue);
+      
+      this.log(`Đang gửi TX Mint SeaDrop (${qty} item)...`, 'warning');
+      const tx = await seadrop.mintPublic(
+        config.contractAddress,
+        OPEN_SEA_FEE_RECIPIENT,
+        ethers.ZeroAddress,
+        qty,
+        overrides
+      );
+
+      this.log(`TX đã gửi: ${tx.hash}`, 'success');
+      const receipt = await tx.wait();
+      this.log(`Thành công tại block ${receipt.blockNumber}`, 'success');
+    } catch (error: any) {
+      this.log(`Mint SeaDrop thất bại: ${error.message}`, 'error');
+    } finally {
+      this.isRunning = false;
+    }
+  }
+
+  async mintCustom(config: BotConfig) {
+    try {
+      this.log('Đang thực hiện lệnh Custom Mint...', 'info');
+      
       const types = config.args.map((arg) => {
         if (typeof arg === 'string' && arg.startsWith('0x') && arg.length === 42) return 'address';
         if (typeof arg === 'number' || typeof arg === 'bigint' || !isNaN(Number(arg))) return 'uint256';
@@ -67,31 +131,8 @@ export class MintBot {
       const abi = [`function ${config.functionName}(${types.join(',')}) payable`];
       const contract = new ethers.Contract(config.contractAddress, abi, this.wallet);
       
-      const overrides: any = {};
-      
-      // EIP-1559 Gas handling
-      if (config.maxPriorityFee) {
-        const [feeData, block] = await Promise.all([
-          this.provider.getFeeData(),
-          this.provider.getBlock('latest')
-        ]);
-        
-        const priorityFee = ethers.parseUnits(config.maxPriorityFee, 'gwei');
-        overrides.maxPriorityFeePerGas = priorityFee;
-        
-        if (block && block.baseFeePerGas) {
-          // Rule of thumb: maxFee = (2 * baseFee) + priorityFee
-          overrides.maxFeePerGas = (block.baseFeePerGas * 2n) + priorityFee;
-        } else {
-          // Fallback if baseFee is not available
-          overrides.maxFeePerGas = feeData.maxFeePerGas || (priorityFee * 2n);
-        }
-      }
-
-      // Paid mint value override
-      if (config.mintValue && parseFloat(config.mintValue) > 0) {
-        overrides.value = ethers.parseEther(config.mintValue);
-      }
+      const mintVal = config.mintValue ? ethers.parseEther(config.mintValue) : 0n;
+      const overrides = await this.buildOverrides(config, mintVal);
 
       const tx = await contract[config.functionName](...config.args, overrides);
       
@@ -99,39 +140,50 @@ export class MintBot {
       const receipt = await tx.wait();
       this.log(`Giao dịch thành công tại block ${receipt.blockNumber}`, 'success');
     } catch (error: any) {
-      this.log(`Mint thất bại: ${error.message}`, 'error');
+      this.log(`Custom Mint thất bại: ${error.message}`, 'error');
     } finally {
       this.isRunning = false;
     }
   }
 
   async snipe(config: BotConfig) {
-    this.log('Chế độ Snipe kích hoạt. Đang kiểm tra trạng thái contract...', 'warning');
+    this.log(`Chế độ Snipe [${config.mintType.toUpperCase()}] kích hoạt.`, 'warning');
     
-    const checkAbi = [
+    const dropAbi = [`function getPublicDrop(address) view returns (tuple(uint80 mintPrice, uint48 startTime, uint48 endTime, uint16 maxTotalMintableByWallet, uint16 feeBps, bool restrictFeeRecipients))`];
+    const seadropReader = new ethers.Contract(SEADROP_ADDRESS, dropAbi, this.provider);
+
+    const customAbi = [
       'function paused() view returns (bool)',
       'function publicSaleActive() view returns (bool)',
       'function saleStarted() view returns (bool)',
     ];
-    const checker = new ethers.Contract(config.contractAddress, checkAbi, this.provider);
+    const checker = new ethers.Contract(config.contractAddress, customAbi, this.provider);
 
     while (this.isRunning) {
       try {
         let isReady = false;
-        
-        try {
-          const paused = await checker.paused();
-          isReady = !paused;
-        } catch {
+
+        if (config.mintType === 'seadrop') {
+          const drop = await seadropReader.getPublicDrop(config.contractAddress);
+          const now = Math.floor(Date.now() / 1000);
+          isReady = now >= Number(drop.startTime) && now <= Number(drop.endTime);
+          if (!isReady) {
+             const timeToWait = Number(drop.startTime) - now;
+             if (timeToWait > 0) {
+               this.log(`Chưa đến giờ mở bán. Cần chờ ${timeToWait} giây...`, 'info');
+             } else {
+               this.log(`Đã quá giờ mở bán hoặc chưa được configure.`, 'info');
+             }
+          }
+        } else {
           try {
-            const active = await checker.publicSaleActive();
-            isReady = active;
+            const paused = await checker.paused();
+            isReady = !paused;
           } catch {
             try {
-               const started = await checker.saleStarted();
-               isReady = started;
+              const active = await checker.publicSaleActive();
+              isReady = active;
             } catch {
-               this.log('Không đọc được trạng thái (paused/active). Sẽ thử mint luôn...', 'warning');
                isReady = true; 
             }
           }
@@ -139,7 +191,11 @@ export class MintBot {
         
         if (isReady) {
           this.log('PHÁT HIỆN MINT ĐÃ MỞ! THỰC THI NGAY...', 'success');
-          await this.mint(config);
+          if (config.mintType === 'seadrop') {
+            await this.mintSeaDrop(config);
+          } else {
+            await this.mintCustom(config);
+          }
           break;
         }
         
