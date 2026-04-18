@@ -53,7 +53,7 @@ export class MintBot {
     const overrides: any = {};
 
     if (config.maxPriorityFee) {
-      const [feeData, block] = await Promise.all([
+      const [_, block] = await Promise.all([
         this.provider.getFeeData(),
         this.provider.getBlock('latest')
       ]);
