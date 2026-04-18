@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ethers } from 'ethers';
-import { 
-  Zap, 
-  Terminal as TerminalIcon, 
-  Play, 
-  Square, 
-  Settings, 
-  Wallet, 
+import {
+  Zap,
+  Terminal as TerminalIcon,
+  Play,
+  Square,
+  Settings,
+  Wallet,
   Activity,
   ShieldCheck,
   Server,
@@ -19,12 +19,12 @@ import { MintBot } from './logic/mintBot';
 import type { BotConfig, LogMessage } from './logic/mintBot';
 
 const NETWORKS = [
-  { name: 'Ethereum (Alchemy)', url: `https://eth-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_KEY || ''}` },
+  { name: 'Ethereum', url: `https://eth-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_KEY || ''}` },
   { name: 'Ethereum (Cloudflare)', url: 'https://cloudflare-eth.com' },
-  { name: 'BSC (Binance)', url: 'https://bsc-dataseed.binance.org/' },
-  { name: 'Base (Official)', url: 'https://mainnet.base.org' },
-  { name: 'Polygon (Official)', url: 'https://polygon-rpc.com' },
-  { name: 'Arbitrum (Official)', url: 'https://arb1.arbitrum.io/rpc' },
+  { name: 'BSC', url: 'https://bsc-dataseed.binance.org/' },
+  { name: 'Base', url: 'https://mainnet.base.org' },
+  { name: 'Polygon', url: 'https://polygon-rpc.com' },
+  { name: 'Arbitrum', url: 'https://arb1.arbitrum.io/rpc' },
   { name: 'Custom RPC', url: '' }
 ];
 
@@ -34,7 +34,7 @@ const ACCESS_PASSWORD = import.meta.env.VITE_ACCESS_PASSWORD || 'admin';
 function App() {
   const [unlocked, setUnlocked] = useState(false);
   const [passInput, setPassInput] = useState('');
-  
+
   const [config, setConfig] = useState<Omit<BotConfig, 'privateKey'>>({
     rpcUrl: NETWORKS[0].url,
     contractAddress: '',
@@ -66,7 +66,7 @@ function App() {
           provider.getBlockNumber(),
           provider.getFeeData()
         ]);
-        
+
         const gasGwei = feeData.gasPrice ? Number(ethers.formatUnits(feeData.gasPrice, 'gwei')).toFixed(1) : '0';
         const latency = Date.now() - start;
 
@@ -107,7 +107,7 @@ function App() {
     setIsBotRunning(true);
     const fullConfig: BotConfig = { ...config, privateKey: privateKeyRef.current };
     botRef.current = new MintBot(fullConfig, addLog);
-    
+
     try {
       await botRef.current.start(fullConfig);
     } catch (err: any) {
@@ -131,17 +131,17 @@ function App() {
             <span style={{ fontSize: 24 }}>ELIAS BOT</span>
           </div>
           <label className="label">Mật khẩu truy cập</label>
-          <input 
-            type="password" 
-            className="input" 
+          <input
+            type="password"
+            className="input"
             style={{ textAlign: 'center', fontSize: 18, letterSpacing: 4 }}
             placeholder="••••••"
             value={passInput}
             onChange={(e) => setPassInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && passInput === ACCESS_PASSWORD && setUnlocked(true)}
           />
-          <button 
-            className="btn btn-primary" 
+          <button
+            className="btn btn-primary"
             style={{ marginTop: 20 }}
             onClick={() => passInput === ACCESS_PASSWORD ? setUnlocked(true) : alert('Sai mật khẩu!')}
           >
@@ -165,16 +165,16 @@ function App() {
             <span>ELIAS BOT</span>
           </div>
           <button onClick={() => setUnlocked(false)} style={{ background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer' }}>
-             <Unlock size={16} />
+            <Unlock size={16} />
           </button>
         </div>
 
         <div className="section">
           <label className="label">Chế độ Mint</label>
-          <select 
+          <select
             className="input"
             value={config.mintType}
-            onChange={(e) => setConfig({...config, mintType: e.target.value as any})}
+            onChange={(e) => setConfig({ ...config, mintType: e.target.value as any })}
           >
             <option value="seadrop">SeaDrop (OpenSea)</option>
             <option value="custom">Custom Contract (Direct)</option>
@@ -183,28 +183,28 @@ function App() {
 
         <div className="section">
           <label className="label">Mạng / Chain</label>
-          <select 
+          <select
             className="input"
             value={NETWORKS.find(n => n.url === config.rpcUrl)?.url || ''}
-            onChange={(e) => setConfig({...config, rpcUrl: e.target.value})}
+            onChange={(e) => setConfig({ ...config, rpcUrl: e.target.value })}
           >
             {NETWORKS.map(n => <option key={n.name} value={n.url}>{n.name}</option>)}
           </select>
           {(!NETWORKS.some(n => n.url === config.rpcUrl) || config.rpcUrl === '') && (
-            <input 
+            <input
               type="text"
               className="input"
               style={{ marginTop: 8 }}
               placeholder="https://your-custom-rpc.com"
               value={config.rpcUrl}
-              onChange={(e) => setConfig({...config, rpcUrl: e.target.value})}
+              onChange={(e) => setConfig({ ...config, rpcUrl: e.target.value })}
             />
           )}
         </div>
 
         <div className="section">
           <label className="label">Private Key</label>
-          <input 
+          <input
             type="password"
             className="input"
             placeholder="0x..."
@@ -214,82 +214,82 @@ function App() {
 
         <div className="section">
           <label className="label">Địa chỉ Contract NFT</label>
-          <input 
+          <input
             type="text"
             className="input"
             placeholder="0x..."
             value={config.contractAddress}
-            onChange={(e) => setConfig({...config, contractAddress: e.target.value})}
+            onChange={(e) => setConfig({ ...config, contractAddress: e.target.value })}
           />
         </div>
 
         <div className="grid-2">
+          <div className="section">
+            <label className="label">Số lượng Mint</label>
+            <input
+              type="number"
+              className="input"
+              value={config.quantity}
+              onChange={(e) => setConfig({ ...config, quantity: Number(e.target.value) })}
+            />
+          </div>
+          {config.mintType === 'custom' ? (
             <div className="section">
-                <label className="label">Số lượng Mint</label>
-                <input 
-                    type="number"
-                    className="input"
-                    value={config.quantity}
-                    onChange={(e) => setConfig({...config, quantity: Number(e.target.value)})}
-                />
+              <label className="label">Giá Mint (ETH)</label>
+              <input
+                type="text"
+                className="input"
+                placeholder="0.01"
+                value={config.mintValue}
+                onChange={(e) => setConfig({ ...config, mintValue: e.target.value })}
+              />
             </div>
-            {config.mintType === 'custom' ? (
-                <div className="section">
-                    <label className="label">Giá Mint (ETH)</label>
-                    <input 
-                        type="text"
-                        className="input"
-                        placeholder="0.01"
-                        value={config.mintValue}
-                        onChange={(e) => setConfig({...config, mintValue: e.target.value})}
-                    />
-                </div>
-            ) : (
-                <div className="section">
-                    <label className="label">Loại Contract</label>
-                    <div className="input" style={{ opacity: 0.5, fontSize: 12 }}>Auto-Fetch Giá</div>
-                </div>
-            )}
+          ) : (
+            <div className="section">
+              <label className="label">Loại Contract</label>
+              <div className="input" style={{ opacity: 0.5, fontSize: 12 }}>Auto-Fetch Giá</div>
+            </div>
+          )}
         </div>
 
         {config.mintType === 'custom' && (
-            <>
-                <div className="section">
-                    <label className="label">Tên hàm Mint</label>
-                    <input 
-                        type="text"
-                        className="input"
-                        placeholder="mint"
-                        value={config.functionName}
-                        onChange={(e) => setConfig({...config, functionName: e.target.value})}
-                    />
-                </div>
+          <>
+            <div className="section">
+              <label className="label">Tên hàm Mint</label>
+              <input
+                type="text"
+                className="input"
+                placeholder="mint"
+                value={config.functionName}
+                onChange={(e) => setConfig({ ...config, functionName: e.target.value })}
+              />
+            </div>
 
-                <div className="section">
-                    <label className="label">Tham số hàm (JSON array)</label>
-                    <input 
-                        type="text"
-                        className="input"
-                        placeholder='["0xAddress", 1]'
-                        onChange={(e) => {
-                           try {
-                             const parsed = JSON.parse(e.target.value);
-                             if (Array.isArray(parsed)) setConfig({...config, args: parsed});
-                           } catch (e) {}
-                        }}
-                    />
-                </div>
-            </>
+            <div className="section">
+              <label className="label">Tham số hàm (JSON array)</label>
+              <input
+                type="text"
+                className="input"
+                placeholder='["0xAddress", 1]'
+                onChange={(e) => {
+                  try {
+                    const parsed = JSON.parse(e.target.value);
+                    if (Array.isArray(parsed)) setConfig({ ...config, args: parsed });
+                  } catch (e) { }
+                }}
+              />
+            </div>
+          </>
         )}
 
         <div className="section">
           <label className="label">Tiền Tip (Max Priority Fee - Gwei)</label>
-          <input 
+          <input
             type="number"
             className="input"
             placeholder="Ví dụ: 2"
             value={config.maxPriorityFee}
-            onChange={(e) => setConfig({...config, maxPriorityFee: e.target.value})}
+            onChange={(e) => setConfig({ ...config, maxPriorityFee: e.target.value })}
           />
           <span className="label" style={{ fontSize: 10, marginTop: 4, textTransform: 'none' }}>
             Tip cho thợ đào (EIP-1559). 2-5 nhanh, &gt;10 cực nhanh.
@@ -299,15 +299,15 @@ function App() {
         <div className="section">
           <label className="label">Chế độ chạy</label>
           <div className="grid-2">
-            <button 
+            <button
               className={`btn ${config.mode === 'instant' ? 'btn-primary' : 'input'}`}
-              onClick={() => setConfig({...config, mode: 'instant'})}
+              onClick={() => setConfig({ ...config, mode: 'instant' })}
             >
               Mint Ngay
             </button>
-            <button 
+            <button
               className={`btn ${config.mode === 'snipe' ? 'btn-primary' : 'input'}`}
-              onClick={() => setConfig({...config, mode: 'snipe'})}
+              onClick={() => setConfig({ ...config, mode: 'snipe' })}
             >
               Auto Snipe
             </button>
@@ -317,11 +317,11 @@ function App() {
         <div style={{ marginTop: 'auto' }}>
           {!isBotRunning ? (
             <button className="btn btn-primary flex items-center justify-center gap-2" onClick={handleStart}>
-               <Play size={18} /> BẮT ĐẦU CHẠY
+              <Play size={18} /> BẮT ĐẦU CHẠY
             </button>
           ) : (
             <button className="btn btn-danger flex items-center justify-center gap-2" onClick={handleStop}>
-               <Square size={18} /> DỪNG BOT
+              <Square size={18} /> DỪNG BOT
             </button>
           )}
         </div>
@@ -359,7 +359,7 @@ function App() {
             <span>CONSOLE OUTPUT</span>
             <span className="badge" style={{ marginLeft: 'auto' }}>{logs.length} ITEMS</span>
           </div>
-          
+
           <div className="log-container">
             {logs.length === 0 && <div className="log-item" style={{ opacity: 0.5 }}>Chờ hành động từ người dùng...</div>}
             {logs.map((log, i) => (
