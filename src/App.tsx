@@ -11,21 +11,30 @@ import {
   ShieldCheck,
   Server,
   Cpu,
-  RefreshCw
+  RefreshCw,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { MintBot } from './logic/mintBot';
 import type { BotConfig, LogMessage } from './logic/mintBot';
 
 const NETWORKS = [
-  { name: 'Ethereum', url: 'https://rpc.ankr.com/eth' },
-  { name: 'BSC (BNB Chain)', url: 'https://bsc-dataseed.binance.org/' },
-  { name: 'Base', url: 'https://mainnet.base.org' },
-  { name: 'Polygon', url: 'https://polygon-rpc.com' },
-  { name: 'Arbitrum', url: 'https://arb1.arbitrum.io/rpc' },
+  { name: 'Ethereum (Alchemy)', url: `https://eth-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_KEY || ''}` },
+  { name: 'Ethereum (Cloudflare)', url: 'https://cloudflare-eth.com' },
+  { name: 'BSC (Binance)', url: 'https://bsc-dataseed.binance.org/' },
+  { name: 'Base (Official)', url: 'https://mainnet.base.org' },
+  { name: 'Polygon (Official)', url: 'https://polygon-rpc.com' },
+  { name: 'Arbitrum (Official)', url: 'https://arb1.arbitrum.io/rpc' },
   { name: 'Custom RPC', url: '' }
 ];
 
+// MẬT KHẨU TRUY CẬP (Đọc từ .env)
+const ACCESS_PASSWORD = import.meta.env.VITE_ACCESS_PASSWORD || 'admin';
+
 function App() {
+  const [unlocked, setUnlocked] = useState(false);
+  const [passInput, setPassInput] = useState('');
+  
   const [config, setConfig] = useState<Omit<BotConfig, 'privateKey'>>({
     rpcUrl: NETWORKS[0].url,
     contractAddress: '',
@@ -47,7 +56,7 @@ function App() {
 
   // Fetch real stats from RPC
   useEffect(() => {
-    if (!config.rpcUrl) return;
+    if (!config.rpcUrl || !unlocked) return;
 
     const fetchStats = async () => {
       try {
@@ -74,7 +83,7 @@ function App() {
     fetchStats();
     const itv = setInterval(fetchStats, 10000); // Update every 10s
     return () => clearInterval(itv);
-  }, [config.rpcUrl]);
+  }, [config.rpcUrl, unlocked]);
 
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -85,6 +94,11 @@ function App() {
   };
 
   const handleStart = async () => {
+    if (!config.rpcUrl) {
+      addLog({ timestamp: new Date().toLocaleTimeString(), message: 'Vui lòng nhập Custom RPC URL!', type: 'error' });
+      return;
+    }
+
     if (!privateKeyRef.current || !config.contractAddress) {
       addLog({ timestamp: new Date().toLocaleTimeString(), message: 'Vui lòng nhập đầy đủ thông tin (Private Key & Contract)!', type: 'error' });
       return;
@@ -108,13 +122,51 @@ function App() {
     setIsBotRunning(false);
   };
 
+  if (!unlocked) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="card" style={{ width: 350, textAlign: 'center' }}>
+          <div className="title" style={{ justifyContent: 'center', marginBottom: 24 }}>
+            <Lock size={32} className="text-blue-500" />
+            <span style={{ fontSize: 24 }}>ELIAS BOT</span>
+          </div>
+          <label className="label">Mật khẩu truy cập</label>
+          <input 
+            type="password" 
+            className="input" 
+            style={{ textAlign: 'center', fontSize: 18, letterSpacing: 4 }}
+            placeholder="••••••"
+            value={passInput}
+            onChange={(e) => setPassInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && passInput === ACCESS_PASSWORD && setUnlocked(true)}
+          />
+          <button 
+            className="btn btn-primary" 
+            style={{ marginTop: 20 }}
+            onClick={() => passInput === ACCESS_PASSWORD ? setUnlocked(true) : alert('Sai mật khẩu!')}
+          >
+            MỞ KHÓA HỆ THỐNG
+          </button>
+          <div style={{ marginTop: 20, fontSize: 10, color: '#4b5563' }}>
+            SECURED ACCESS ONLY
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container">
+    <div className="container" style={{ animation: 'fadeIn 0.5s ease' }}>
       {/* Sidebar: Configuration */}
       <aside className="sidebar">
-        <div className="title">
-          <Zap size={24} className="text-blue-500" />
-          <span>ELIAS BOT</span>
+        <div className="title" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Zap size={24} className="text-blue-500" />
+            <span>ELIAS BOT</span>
+          </div>
+          <button onClick={() => setUnlocked(false)} style={{ background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer' }}>
+             <Unlock size={16} />
+          </button>
         </div>
 
         <div className="section">
@@ -133,11 +185,21 @@ function App() {
           <label className="label">Mạng / Chain</label>
           <select 
             className="input"
-            value={config.rpcUrl}
+            value={NETWORKS.find(n => n.url === config.rpcUrl)?.url || ''}
             onChange={(e) => setConfig({...config, rpcUrl: e.target.value})}
           >
             {NETWORKS.map(n => <option key={n.name} value={n.url}>{n.name}</option>)}
           </select>
+          {(!NETWORKS.some(n => n.url === config.rpcUrl) || config.rpcUrl === '') && (
+            <input 
+              type="text"
+              className="input"
+              style={{ marginTop: 8 }}
+              placeholder="https://your-custom-rpc.com"
+              value={config.rpcUrl}
+              onChange={(e) => setConfig({...config, rpcUrl: e.target.value})}
+            />
+          )}
         </div>
 
         <div className="section">
@@ -230,7 +292,7 @@ function App() {
             onChange={(e) => setConfig({...config, maxPriorityFee: e.target.value})}
           />
           <span className="label" style={{ fontSize: 10, marginTop: 4, textTransform: 'none' }}>
-            Thiết lập tiền tip cho thợ đào (EIP-1559). 2-5 là nhanh, &gt;10 là cực nhanh.
+            Tip cho thợ đào (EIP-1559). 2-5 nhanh, &gt;10 cực nhanh.
           </span>
         </div>
 
