@@ -121,7 +121,7 @@ export class MintBot {
             overrides
         );
         overrides.gasLimit = (estGas * 12n) / 10n; // Add 20% margin
-      } catch (e) {
+      } catch {
         this.log('Không thể ước tính Gas, dùng Default Gas Limit', 'warning');
         overrides.gasLimit = 500000n;
       }

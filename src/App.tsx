@@ -1,17 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ethers } from 'ethers';
 import {
   Zap,
   Terminal as TerminalIcon,
   Play,
   Square,
-  Settings,
-  Wallet,
-  Activity,
-  ShieldCheck,
-  Server,
-  Cpu,
-  RefreshCw,
   Lock,
   Unlock
 } from 'lucide-react';
