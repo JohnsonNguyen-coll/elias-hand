@@ -29,7 +29,9 @@ export class MintBot {
   private onLog: (log: LogMessage) => void;
 
   constructor(config: BotConfig, onLog: (log: LogMessage) => void) {
-    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
+    this.provider = new ethers.JsonRpcProvider(config.rpcUrl, undefined, {
+      batchMaxCount: 1  // tắt batching
+    });
     this.wallet = new ethers.Wallet(config.privateKey, this.provider);
     this.onLog = onLog;
   }
