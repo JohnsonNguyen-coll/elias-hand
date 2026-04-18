@@ -55,6 +55,7 @@ function App() {
     args: [],
     mode: 'instant',
     maxPriorityFee: '2',
+    maxFee: '',
     mintValue: '0',
     mintType: 'seadrop',
     quantity: 1
@@ -134,6 +135,12 @@ function App() {
     botRef.current?.stop();
     setIsBotRunning(false);
   };
+
+  useEffect(() => {
+    if (!unlocked) {
+      privateKeyRef.current = '';
+    }
+  }, [unlocked]);
 
   if (!unlocked) {
     return (
@@ -236,6 +243,7 @@ function App() {
           <input
             type="password"
             className="input"
+            autoComplete="off"
             placeholder="0x..."
             onChange={(e) => { privateKeyRef.current = e.target.value }}
           />
@@ -311,19 +319,31 @@ function App() {
           </>
         )}
 
-        <div className="section">
-          <label className="label">Tiền Tip (Max Priority Fee - Gwei)</label>
-          <input
-            type="number"
-            className="input"
-            placeholder="Ví dụ: 2"
-            value={config.maxPriorityFee}
-            onChange={(e) => setConfig({ ...config, maxPriorityFee: e.target.value })}
-          />
-          <span className="label" style={{ fontSize: 10, marginTop: 4, textTransform: 'none' }}>
-            Tip cho thợ đào (EIP-1559). 2-5 nhanh, &gt;10 cực nhanh.
-          </span>
+        <div className="grid-2">
+          <div className="section">
+            <label className="label">Tiền Tip (Priority - Gwei)</label>
+            <input
+              type="number"
+              className="input"
+              placeholder="Vd: 2"
+              value={config.maxPriorityFee}
+              onChange={(e) => setConfig({ ...config, maxPriorityFee: e.target.value })}
+            />
+          </div>
+          <div className="section">
+            <label className="label">Max Fee (Gwei)</label>
+            <input
+              type="number"
+              className="input"
+              placeholder="Auto"
+              value={config.maxFee}
+              onChange={(e) => setConfig({ ...config, maxFee: e.target.value })}
+            />
+          </div>
         </div>
+        <span className="label" style={{ fontSize: 10, marginTop: 4, textTransform: 'none' }}>
+          Để trống Max Fee để bot tự động tính (Auto = Base x 1.5 + Tip).
+        </span>
 
         <div className="section">
           <label className="label">Chế độ chạy</label>
