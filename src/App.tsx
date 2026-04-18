@@ -11,15 +11,35 @@ import {
 import { MintBot } from './logic/mintBot';
 import type { BotConfig, LogMessage } from './logic/mintBot';
 
+const ALCHEMY_KEY = import.meta.env.VITE_ALCHEMY_KEY || '';
+const QUICKNODE_RPC = import.meta.env.VITE_ALCHEMY_QUICKNODE || '';
+
 const NETWORKS = [
-  { name: 'Ethereum', url: `https://eth-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_KEY || ''}` },
+  // Alchemy Networks (Only if key exists)
+  ...(ALCHEMY_KEY ? [
+    { name: 'Ethereum (Alchemy)', url: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}` },
+    { name: 'Base (Alchemy)', url: `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}` },
+    { name: 'Polygon (Alchemy)', url: `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}` },
+    { name: 'Arbitrum (Alchemy)', url: `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}` },
+  ] : []),
+  
+  // QuickNode RPC (Only if provided)
+  ...(QUICKNODE_RPC ? [
+    { name: 'QuickNode RPC', url: QUICKNODE_RPC }
+  ] : []),
+
+  // Public Networks
+  { name: 'Ethereum (Flashbots Fast)', url: 'https://rpc.flashbots.net/fast' },
   { name: 'Ethereum (Cloudflare)', url: 'https://cloudflare-eth.com' },
-  { name: 'BSC', url: 'https://bsc-dataseed.binance.org/' },
-  { name: 'Base', url: 'https://mainnet.base.org' },
-  { name: 'Polygon', url: 'https://polygon-rpc.com' },
-  { name: 'Arbitrum', url: 'https://arb1.arbitrum.io/rpc' },
+  { name: 'BSC (Public)', url: 'https://bsc-dataseed.binance.org/' },
+  { name: 'Base (Public)', url: 'https://mainnet.base.org' },
+  { name: 'Polygon (Public)', url: 'https://polygon-rpc.com' },
+  { name: 'Arbitrum (Public)', url: 'https://arb1.arbitrum.io/rpc' },
+  { name: 'Optimism (Public)', url: 'https://mainnet.optimism.io' },
   { name: 'Custom RPC', url: '' }
 ];
+
+
 
 // MẬT KHẨU TRUY CẬP (Đọc từ .env)
 const ACCESS_PASSWORD = import.meta.env.VITE_ACCESS_PASSWORD || 'admin';
@@ -178,10 +198,26 @@ function App() {
           <label className="label">Mạng / Chain</label>
           <select
             className="input"
-            value={NETWORKS.find(n => n.url === config.rpcUrl)?.url || ''}
+            value={NETWORKS.some(n => n.url === config.rpcUrl) ? config.rpcUrl : ''}
             onChange={(e) => setConfig({ ...config, rpcUrl: e.target.value })}
           >
-            {NETWORKS.map(n => <option key={n.name} value={n.url}>{n.name}</option>)}
+            {/* Alchemy & QuickNode group */}
+            {(ALCHEMY_KEY || QUICKNODE_RPC) && (
+              <optgroup label="Premium RPC (Alchemy/Quicknode)">
+                {NETWORKS.filter(n => n.url.includes('alchemy') || n.url.includes('quiknode') || n.url.includes('quicknode')).map(n => (
+                  <option key={n.name} value={n.url}>{n.name}</option>
+                ))}
+              </optgroup>
+            )}
+            
+            {/* Public Networks group */}
+            <optgroup label="Public Networks">
+              {NETWORKS.filter(n => !n.url.includes('alchemy') && !n.url.includes('quiknode') && !n.url.includes('quicknode') && n.url !== '').map(n => (
+                <option key={n.name} value={n.url}>{n.name}</option>
+              ))}
+            </optgroup>
+
+            <option value="">Custom RPC...</option>
           </select>
           {(!NETWORKS.some(n => n.url === config.rpcUrl) || config.rpcUrl === '') && (
             <input
